@@ -38,6 +38,7 @@
 				<div class="card kpi"><div class="kpi-label">💰 Tuition Fees</div><div id="kpiFees" class="kpi-value">₹0</div></div>
 				<div class="card kpi"><div class="kpi-label">🚕 Taxi Fare</div><div id="kpiTaxi" class="kpi-value">₹0</div></div>
 				<div class="card kpi"><div class="kpi-label">💵 Collected</div><div id="kpiCollected" class="kpi-value">₹0</div></div>
+				<div class="card kpi"><div class="kpi-label">🗓️ Current Month Amount</div><div id="kpiCurrentMonthAmount" class="kpi-value">₹0</div></div>
 				<div class="card kpi"><div class="kpi-label">📉 Balance</div><div id="kpiBalance" class="kpi-value">₹0</div></div>
 			</div>
 			<div class="card chart-card">
@@ -222,9 +223,6 @@
 			<label>Date
 				<input name="date" type="date" required />
 			</label>
-			<label>Student
-				<select name="studentId" required id="paymentStudent"></select>
-			</label>
 			<label>Amount (₹)
 				<input name="amount" type="number" step="1" min="0" required />
 			</label>
@@ -249,4 +247,3 @@
 	<script src="./app.js"></script>
 </body>
 </html>
-
