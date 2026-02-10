@@ -122,7 +122,7 @@
 		return `
 			<div class="ms-row">
 				<select name="studentId">${opts}</select>
-				<input name="duration" type="number" min="0" step="0.5" placeholder="hours" />
+				<input name="duration" type="number" min="0" step="any" placeholder="hours" />
 				<button type="button" class="icon-btn" data-act="remove">✖️</button>
 			</div>
 		`;
