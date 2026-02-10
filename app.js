@@ -31,8 +31,11 @@
 		});
 		state.sessions = (state.sessions||[]).map(sess=>({
 			...sess,
+			bikeFare: Number(sess.bikeFare||0),
+			notes: sess.notes || '',
 			rows: (sess.rows||[]).map(r=>({
 				...r,
+				duration: Number(r.duration||0),
 				rate: Number.isFinite(Number(r.rate)) ? Number(r.rate) : Number(studentRates.get(r.studentId) ?? state.globalRate ?? 0)
 			}))
 		}));
@@ -48,6 +51,8 @@
 	function setTheme(theme){
 		document.documentElement.setAttribute('data-theme', theme);
 		localStorage.setItem(THEME_KEY, theme);
+		const toggle = byId('themeToggle');
+		if(toggle) toggle.textContent = theme === 'dark' ? '🌙' : '☀️';
 	}
 	function initTheme(){
 		const saved = localStorage.getItem(THEME_KEY);
@@ -61,34 +66,68 @@
 	const genderEmoji = (g)=> g === 'female' ? '👧' : '👦';
 	const genId = ()=> Math.random().toString(36).slice(2,9);
 	function dateStr(d){
-		const dt = new Date(d);
+		const dt = parseDateAtLocalStart(d);
+		if(!dt) return 'Invalid Date';
 		return dt.toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' });
 	}
 	function monthKey(d){
-		const dt = new Date(d);
+		const dt = parseDateAtLocalStart(d);
+		if(!dt) return '';
 		return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
 	}
+	function parseDateAtLocalStart(value){
+		if(!value) return null;
+		if(value instanceof Date) return value;
+		if(/^\d{4}-\d{2}-\d{2}$/.test(value)){
+			const [year, month, day] = value.split('-').map(Number);
+			return new Date(year, month - 1, day, 0, 0, 0, 0);
+		}
+		const parsed = new Date(value);
+		return Number.isNaN(parsed.getTime()) ? null : parsed;
+	}
+	function parseDateAtLocalEnd(value){
+		const dt = parseDateAtLocalStart(value);
+		if(!dt) return null;
+		dt.setHours(23,59,59,999);
+		return dt;
+	}
 	function inRange(dateStr, start, end){
-		const d = new Date(dateStr);
-		return (!start || d >= new Date(start)) && (!end || d <= new Date(end));
+		const d = parseDateAtLocalStart(dateStr);
+		const startDate = parseDateAtLocalStart(start);
+		const endDate = parseDateAtLocalEnd(end);
+		if(!d) return false;
+		return (!startDate || d >= startDate) && (!endDate || d <= endDate);
 	}
 
 	// Tabs
 	function initTabs(){
 		document.querySelectorAll('.tab').forEach(btn=>{
 			btn.addEventListener('click', ()=>{
-				document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+				document.querySelectorAll('.tab').forEach(b=>{
+					b.classList.remove('active');
+					b.setAttribute('aria-selected', 'false');
+				});
 				document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
 				btn.classList.add('active');
+				btn.setAttribute('aria-selected', 'true');
 				document.getElementById(btn.dataset.tab).classList.add('active');
 			});
 		});
+	}
+
+
+	function renderEmptyState(container, message){
+		container.innerHTML = `<div class="empty-state">${message}</div>`;
 	}
 
 	// Students CRUD UI
 	function renderStudents(){
 		const list = byId('studentsList');
 		list.innerHTML = '';
+		if(state.students.length===0){
+			renderEmptyState(list, 'No students yet. Add your first student to start tracking.');
+			return;
+		}
 		state.students.forEach(st=>{
 			const dues = calcStudentBalance(st.id);
 			const item = document.createElement('div');
@@ -104,7 +143,15 @@
 				</div>
 			`;
 			item.querySelector('[data-act="edit"]').onclick = ()=> openStudentDialog(st);
-			item.querySelector('[data-act="delete"]').onclick = ()=>{ if(confirm('Delete student?')){ state.students = state.students.filter(x=>x.id!==st.id); save(); }};
+			item.querySelector('[data-act="delete"]').onclick = ()=>{
+				if(confirm('Delete student? Related session rows will be removed.')){
+					state.students = state.students.filter(x=>x.id!==st.id);
+					state.sessions = state.sessions
+						.map(sess=>({ ...sess, rows: sess.rows.filter(r=>r.studentId !== st.id) }))
+						.filter(sess=>sess.rows.length>0);
+					save();
+				}
+			};
 			list.appendChild(item);
 		});
 	}
@@ -237,10 +284,14 @@
 		list.innerHTML = '';
 		const sDate = byId('sessionStartFilter').value;
 		const eDate = byId('sessionEndFilter').value;
-		state.sessions
+		const filteredSessions = state.sessions
 			.filter(s=> inRange(s.date, sDate, eDate))
-			.sort((a,b)=> new Date(b.date)-new Date(a.date))
-			.forEach(sess=>{
+			.sort((a,b)=> new Date(b.date)-new Date(a.date));
+		if(filteredSessions.length===0){
+			renderEmptyState(list, 'No sessions in the selected date range.');
+			return;
+		}
+		filteredSessions.forEach(sess=>{
 				const item = document.createElement('div');
 				item.className = 'list-item';
 				const parts = sess.rows.map(r=>{
@@ -299,10 +350,14 @@
 		list.innerHTML = '';
 		const sDate = byId('paymentStartFilter').value;
 		const eDate = byId('paymentEndFilter').value;
-		state.payments
+		const filteredPayments = state.payments
 			.filter(p=> inRange(p.date, sDate, eDate))
-			.sort((a,b)=> new Date(b.date)-new Date(a.date))
-			.forEach(p=>{
+			.sort((a,b)=> new Date(b.date)-new Date(a.date));
+		if(filteredPayments.length===0){
+			renderEmptyState(list, 'No payments in the selected date range.');
+			return;
+		}
+		filteredPayments.forEach(p=>{
 				const item = document.createElement('div');
 				item.className = 'list-item';
 				item.innerHTML = `
@@ -454,9 +509,9 @@
 		const lines=[];
 		let sessions = state.sessions.slice();
 		if(range && range.start && range.end){
-			const sDate = new Date(range.start);
-			const eDate = new Date(range.end);
-			sessions = sessions.filter(x=>{ const d=new Date(x.date); return d>=sDate && d<=eDate; });
+			const sDate = parseDateAtLocalStart(range.start);
+			const eDate = parseDateAtLocalEnd(range.end);
+			sessions = sessions.filter(x=>{ const d=parseDateAtLocalStart(x.date); return d && d>=sDate && d<=eDate; });
 		}
 		sessions.sort((a,b)=> new Date(a.date)-new Date(b.date));
 		let totalHours=0,totalFees=0,totalTaxi=0;
@@ -487,7 +542,7 @@
 		URL.revokeObjectURL(url);
 	}
 	function exportCsvStudents(){
-		const headers = ['id','name','gender','hourlyRate','color','notes'];
+		const headers = ['id','name','gender','color','notes'];
 		const rows = state.students.map(s=> headers.map(h=>csvEscape(s[h])).join(','));
 		download('students.csv', headers.join(',')+'\n'+rows.join('\n'), 'text/csv');
 	}
@@ -509,7 +564,12 @@
 		reader.onload = ()=>{
 			try{
 				const data = JSON.parse(reader.result);
-				if(data && data.students && data.sessions && data.payments){ state = data; save(); alert('Imported successfully'); }
+				if(data && Array.isArray(data.students) && Array.isArray(data.sessions) && Array.isArray(data.payments)){
+					state = { ...state, ...data };
+					normalizeState();
+					save();
+					alert('Imported successfully');
+				}
 				else alert('Invalid backup');
 			}catch(e){ alert('Import failed'); }
 		};
@@ -571,6 +631,7 @@
 		byId('themeToggle').addEventListener('click', ()=>{
 			const cur = document.documentElement.getAttribute('data-theme')||'dark';
 			setTheme(cur==='dark'?'light':'dark');
+			refreshAll();
 		});
 		// Forms
 		handleStudentForm();
@@ -600,5 +661,4 @@
 
 	document.addEventListener('DOMContentLoaded', init);
 })();
-
 
