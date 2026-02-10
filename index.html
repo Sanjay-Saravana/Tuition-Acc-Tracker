@@ -1,249 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Tuition Accounts</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="./styles.css" />
-	<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><text y='1em' font-size='96'>📘</text></svg>">
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tuition Accounts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><text y='1em' font-size='96'>📘</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-	<header class="app-header">
-		<div class="brand">
-			<span class="logo">📘</span>
-			<div><h1>Tuition Accounts</h1><div class="li-sub">Track sessions, payments and balances</div></div>
-		</div>
-		<div class="header-actions">
-			<button id="themeToggle" class="icon-btn" title="Toggle theme">🌗</button>
-		</div>
-	</header>
+  <header class="app-header glass">
+    <div class="brand">
+      <div class="logo">📘</div>
+      <div>
+        <h1>Tuition Accounts</h1>
+        <p class="li-sub">Modern tuition ledger with cloud sync</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="openCloudSettings" class="secondary">Cloud Settings</button>
+      <button id="authButton" class="primary">Sign In</button>
+      <button id="themeToggle" class="icon-btn" title="Toggle theme">🌗</button>
+    </div>
+  </header>
 
-	<nav class="tabs" role="tablist">
-		<button class="tab active" data-tab="dashboard" aria-selected="true">Dashboard</button>
-		<button class="tab" data-tab="students">Students</button>
-		<button class="tab" data-tab="sessions">Sessions</button>
-		<button class="tab" data-tab="payments">Payments</button>
-		<button class="tab" data-tab="reports">Reports</button>
-		<button class="tab" data-tab="export">Export</button>
-	</nav>
+  <section class="hero-wrap">
+    <div class="hero-card glass">
+      <h2>Track sessions, payments, and balances in one place.</h2>
+      <p id="authStatus" class="li-sub">Signed out • data saved only on this device.</p>
+    </div>
+  </section>
 
-	<main class="tab-panels">
-		<section id="dashboard" class="panel active" role="tabpanel">
-			<div class="cards">
-				<div class="card kpi"><div class="kpi-label">⏱️ Total Hours</div><div id="kpiHours" class="kpi-value">0</div></div>
-				<div class="card kpi"><div class="kpi-label">💰 Tuition Fees</div><div id="kpiFees" class="kpi-value">₹0</div></div>
-				<div class="card kpi"><div class="kpi-label">🚕 Taxi Fare</div><div id="kpiTaxi" class="kpi-value">₹0</div></div>
-				<div class="card kpi"><div class="kpi-label">💵 Collected</div><div id="kpiCollected" class="kpi-value">₹0</div></div>
-				<div class="card kpi"><div class="kpi-label">🗓️ Current Month Amount</div><div id="kpiCurrentMonthAmount" class="kpi-value">₹0</div></div>
-				<div class="card kpi"><div class="kpi-label">📉 Balance</div><div id="kpiBalance" class="kpi-value">₹0</div></div>
-			</div>
-			<div class="card chart-card">
-				<div class="card-title chart-header">
-					<span>Overview</span>
-					<div class="btn-group" role="group" aria-label="Chart timeframe">
-						<button class="chip-btn active" data-range="monthly">Monthly</button>
-						<button class="chip-btn" data-range="weekly">Weekly</button>
-						<button class="chip-btn" data-range="daily">Daily</button>
-						<button class="chip-btn" data-range="yearly">Yearly</button>
-					</div>
-				</div>
-				<canvas id="monthlyChart" class="monthly-chart" height="220"></canvas>
-			</div>
-		</section>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button class="tab" data-tab="students">Students</button>
+    <button class="tab" data-tab="sessions">Sessions</button>
+    <button class="tab" data-tab="payments">Payments</button>
+    <button class="tab" data-tab="reports">Reports</button>
+    <button class="tab" data-tab="export">Export</button>
+  </nav>
 
-		<section id="students" class="panel" role="tabpanel">
-			<div class="panel-header">
-				<h2>Students</h2>
-				<div class="header-actions-inline">
-					<button id="editGlobalRateBtn" class="secondary">Set Tuition Rate</button>
-					<button id="addStudentBtn" class="primary">Add Student</button>
-				</div>
-			</div>
-			<div class="card">
-				<div class="card-title">Global Tuition Rate</div>
-				<div id="globalRateDisplay" class="li-sub">₹0/hr</div>
-			</div>
-			<div id="studentsList" class="list"></div>
-		</section>
+  <main class="tab-panels">
+    <section id="dashboard" class="panel active" role="tabpanel">
+      <div class="cards">
+        <div class="card kpi"><div class="kpi-label">⏱️ Total Hours</div><div id="kpiHours" class="kpi-value">0</div></div>
+        <div class="card kpi"><div class="kpi-label">💰 Tuition Fees</div><div id="kpiFees" class="kpi-value">₹0</div></div>
+        <div class="card kpi"><div class="kpi-label">🚕 Taxi Fare</div><div id="kpiTaxi" class="kpi-value">₹0</div></div>
+        <div class="card kpi"><div class="kpi-label">💵 Collected</div><div id="kpiCollected" class="kpi-value">₹0</div></div>
+        <div class="card kpi"><div class="kpi-label">🗓️ Current Month Amount</div><div id="kpiCurrentMonthAmount" class="kpi-value">₹0</div></div>
+        <div class="card kpi"><div class="kpi-label">📉 Balance</div><div id="kpiBalance" class="kpi-value">₹0</div></div>
+      </div>
+      <div class="card chart-card">
+        <div class="card-title chart-header">
+          <span>Overview</span>
+          <div class="btn-group" role="group" aria-label="Chart timeframe">
+            <button class="chip-btn active" data-range="monthly">Monthly</button>
+            <button class="chip-btn" data-range="weekly">Weekly</button>
+            <button class="chip-btn" data-range="daily">Daily</button>
+            <button class="chip-btn" data-range="yearly">Yearly</button>
+          </div>
+        </div>
+        <canvas id="monthlyChart" class="monthly-chart" height="220"></canvas>
+      </div>
+    </section>
 
-		<section id="sessions" class="panel" role="tabpanel">
-			<div class="panel-header">
-				<h2>Sessions</h2>
-				<button id="addSessionBtn" class="primary">Add Session</button>
-			</div>
-			<div class="filters-row">
-				<label>From <input type="date" id="sessionStartFilter" /></label>
-				<label>To <input type="date" id="sessionEndFilter" /></label>
-			</div>
-			<div id="sessionsList" class="list"></div>
-		</section>
+    <section id="students" class="panel" role="tabpanel">
+      <div class="panel-header">
+        <h2>Students</h2>
+        <div class="header-actions-inline">
+          <button id="editGlobalRateBtn" class="secondary">Set Tuition Rate</button>
+          <button id="addStudentBtn" class="primary">Add Student</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Global Tuition Rate</div>
+        <div id="globalRateDisplay" class="li-sub">₹0/hr</div>
+      </div>
+      <div id="studentsList" class="list"></div>
+    </section>
 
-		<section id="payments" class="panel" role="tabpanel">
-			<div class="panel-header">
-				<h2>Payments</h2>
-				<button id="addPaymentBtn" class="primary">Add Payment</button>
-			</div>
-			<div class="filters-row">
-				<label>From <input type="date" id="paymentStartFilter" /></label>
-				<label>To <input type="date" id="paymentEndFilter" /></label>
-			</div>
-			<div id="paymentsList" class="list"></div>
-		</section>
+    <section id="sessions" class="panel" role="tabpanel">
+      <div class="panel-header">
+        <h2>Sessions</h2>
+        <button id="addSessionBtn" class="primary">Add Session</button>
+      </div>
+      <div class="filters-row">
+        <label>From <input type="date" id="sessionStartFilter" /></label>
+        <label>To <input type="date" id="sessionEndFilter" /></label>
+      </div>
+      <div id="sessionsList" class="list"></div>
+    </section>
 
-		<section id="reports" class="panel" role="tabpanel">
-			<div class="panel-header">
-				<h2>Reports</h2>
-			</div>
-			<div class="cards">
-				<div class="card">
-					<div class="card-title">Monthly Totals</div>
-					<div class="grid-3 grid-tight">
-						<label>From <input type="date" id="reportStart" /></label>
-						<label>To <input type="date" id="reportEnd" /></label>
-						<button id="refreshReport" class="secondary">Refresh</button>
-					</div>
-					<div id="reportTotals" class="report-totals"></div>
-				</div>
-				<div class="card chart-card">
-					<div class="card-title">Hours by Student</div>
-					<canvas id="studentHoursChart" class="student-hours" height="220"></canvas>
-				</div>
-			</div>
-		</section>
+    <section id="payments" class="panel" role="tabpanel">
+      <div class="panel-header">
+        <h2>Payments</h2>
+        <button id="addPaymentBtn" class="primary">Add Payment</button>
+      </div>
+      <div class="filters-row">
+        <label>From <input type="date" id="paymentStartFilter" /></label>
+        <label>To <input type="date" id="paymentEndFilter" /></label>
+      </div>
+      <div id="paymentsList" class="list"></div>
+    </section>
 
-		<section id="export" class="panel" role="tabpanel">
-			<div class="panel-header">
-				<h2>Export</h2>
-			</div>
-			<div class="cards">
-				<div class="card">
-					<div class="card-title">Emoji Summary</div>
-					<div class="grid-3 grid-tight">
-						<label>From <input type="date" id="exportStart" /></label>
-						<label>To <input type="date" id="exportEnd" /></label>
-						<button id="copyEmoji" class="secondary">Copy</button>
-					</div>
-					<pre id="emojiOutput" class="emoji-output"></pre>
-				</div>
-				<div class="card">
-					<div class="card-title">CSV Export</div>
-					<div class="grid-3 grid-tight">
-						<button id="exportStudentsCsv" class="secondary">Students CSV</button>
-						<button id="exportSessionsCsv" class="secondary">Sessions CSV</button>
-						<button id="exportPaymentsCsv" class="secondary">Payments CSV</button>
-					</div>
-				</div>
-				<div class="card">
-					<div class="card-title">Backup</div>
-					<div class="grid-3 grid-tight align-center">
-						<button id="exportBackup" class="secondary">Export Backup</button>
-						<input id="importBackupFile" class="file-input" type="file" accept="application/json" />
-						<button id="importBackup" class="secondary">Import Backup</button>
-					</div>
-				</div>
-			</div>
-		</section>
-	</main>
+    <section id="reports" class="panel" role="tabpanel">
+      <div class="panel-header"><h2>Reports</h2></div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Totals in Date Range</div>
+          <div class="grid-3 grid-tight">
+            <label>From <input type="date" id="reportStart" /></label>
+            <label>To <input type="date" id="reportEnd" /></label>
+            <button id="refreshReport" class="secondary">Refresh</button>
+          </div>
+          <div id="reportTotals" class="report-totals"></div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-title">Hours by Student</div>
+          <canvas id="studentHoursChart" class="student-hours" height="220"></canvas>
+        </div>
+      </div>
+    </section>
 
-	<!-- Dialogs -->
-	<dialog id="studentDialog" class="dialog">
-		<form method="dialog" id="studentForm" class="form">
-			<h3 id="studentDialogTitle">Add Student</h3>
-			<input type="hidden" name="id" />
-			<label>Name
-				<input name="name" required placeholder="e.g., Ram Sampath" />
-			</label>
-			<label>Gender
-				<select name="gender" required>
-					<option value="male">Male</option>
-					<option value="female">Female</option>
-				</select>
-			</label>
-			<label>Color Tag
-				<input name="color" type="color" value="#5b8def" />
-			</label>
-			<label>Notes
-				<textarea name="notes" rows="2" placeholder="Optional"></textarea>
-			</label>
-			<div class="dialog-actions">
-				<button type="submit" class="primary">Save</button>
-				<button type="button" class="secondary" value="cancel" onclick="this.closest('dialog').close()">Cancel</button>
-			</div>
-		</form>
-	</dialog>
+    <section id="export" class="panel" role="tabpanel">
+      <div class="panel-header"><h2>Export</h2></div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Emoji Summary</div>
+          <div class="grid-3 grid-tight">
+            <label>From <input type="date" id="exportStart" /></label>
+            <label>To <input type="date" id="exportEnd" /></label>
+            <button id="copyEmoji" class="secondary">Copy</button>
+          </div>
+          <pre id="emojiOutput" class="emoji-output"></pre>
+        </div>
+        <div class="card">
+          <div class="card-title">CSV Export</div>
+          <div class="grid-3 grid-tight">
+            <button id="exportStudentsCsv" class="secondary">Students CSV</button>
+            <button id="exportSessionsCsv" class="secondary">Sessions CSV</button>
+            <button id="exportPaymentsCsv" class="secondary">Payments CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Backup</div>
+          <div class="grid-3 grid-tight align-center">
+            <button id="exportBackup" class="secondary">Export Backup</button>
+            <input id="importBackupFile" class="file-input" type="file" accept="application/json" />
+            <button id="importBackup" class="secondary">Import Backup</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-	<dialog id="globalRateDialog" class="dialog">
-		<form method="dialog" id="globalRateForm" class="form">
-			<h3>Set Global Tuition Rate</h3>
-			<label>Hourly Rate (₹/hr)
-				<input name="hourlyRate" type="number" step="0.5" min="0" required />
-			</label>
-			<div class="dialog-actions">
-				<button type="submit" class="primary">Save</button>
-				<button type="button" class="secondary" value="cancel" onclick="this.closest('dialog').close()">Cancel</button>
-			</div>
-		</form>
-	</dialog>
+  <dialog id="authDialog" class="dialog">
+    <form method="dialog" id="authForm" class="form">
+      <h3>Sign In</h3>
+      <p class="li-sub">Use email/password. New email will create account automatically.</p>
+      <label>Email <input name="email" type="email" required placeholder="you@example.com" /></label>
+      <label>Password <input name="password" type="password" minlength="6" required /></label>
+      <div class="dialog-actions">
+        <button type="submit" class="primary">Continue</button>
+        <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+      </div>
+    </form>
+  </dialog>
 
-	<dialog id="sessionDialog" class="dialog">
-		<form method="dialog" id="sessionForm" class="form">
-			<h3 id="sessionDialogTitle">Add Session</h3>
-			<input type="hidden" name="id" />
-			<label>Date
-				<input name="date" type="date" required />
-			</label>
-			<div class="multi-student">
-				<div class="ms-header">
-					<span>Students & Durations</span>
-					<button type="button" id="addMsRow" class="secondary">+ Add</button>
-				</div>
-				<div id="msRows" class="ms-rows"></div>
-			</div>
-			<label>Bike Taxi Fare (₹)
-				<input name="bikeFare" type="number" step="1" min="0" value="0" />
-			</label>
-			<label>Notes
-				<textarea name="notes" rows="2" placeholder="Optional"></textarea>
-			</label>
-			<div class="dialog-actions">
-				<button type="submit" class="primary">Save</button>
-				<button type="button" class="secondary" value="cancel" onclick="this.closest('dialog').close()">Cancel</button>
-			</div>
-		</form>
-	</dialog>
+  <dialog id="cloudSettingsDialog" class="dialog">
+    <form method="dialog" id="cloudSettingsForm" class="form">
+      <h3>Cloud Settings (Supabase)</h3>
+      <p class="li-sub">Add your project URL + anon key once per device.</p>
+      <label>Supabase URL <input name="url" type="url" required placeholder="https://your-project.supabase.co" /></label>
+      <label>Anon Key <textarea name="anonKey" rows="3" required placeholder="eyJ..." ></textarea></label>
+      <div class="dialog-actions">
+        <button type="submit" class="primary">Save</button>
+        <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+      </div>
+    </form>
+  </dialog>
 
-	<dialog id="paymentDialog" class="dialog">
-		<form method="dialog" id="paymentForm" class="form">
-			<h3 id="paymentDialogTitle">Add Payment</h3>
-			<input type="hidden" name="id" />
-			<label>Date
-				<input name="date" type="date" required />
-			</label>
-			<label>Amount (₹)
-				<input name="amount" type="number" step="1" min="0" required />
-			</label>
-			<label>Notes
-				<textarea name="notes" rows="2" placeholder="Optional"></textarea>
-			</label>
-			<div class="dialog-actions">
-				<button type="submit" class="primary">Save</button>
-				<button type="button" class="secondary" value="cancel" onclick="this.closest('dialog').close()">Cancel</button>
-			</div>
-		</form>
-	</dialog>
+  <dialog id="studentDialog" class="dialog">
+    <form method="dialog" id="studentForm" class="form">
+      <h3 id="studentDialogTitle">Add Student</h3>
+      <input type="hidden" name="id" />
+      <label>Name <input name="name" required placeholder="e.g., Ram Sampath" /></label>
+      <label>Gender
+        <select name="gender" required><option value="male">Male</option><option value="female">Female</option></select>
+      </label>
+      <label>Color Tag <input name="color" type="color" value="#5b8def" /></label>
+      <label>Notes <textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
+      <div class="dialog-actions"><button type="submit" class="primary">Save</button><button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button></div>
+    </form>
+  </dialog>
 
-	<footer class="app-footer">
-		<div class="footer-note">Built for modern browsers • Responsive • Offline-ready • Developer: Sanjay Saravanan</div>
-		<div class="footer-imgs">
-			<img alt="study" src="https://images.unsplash.com/photo-1513258496099-48168024aec0?q=80&w=400&auto=format&fit=crop" />
-			<img alt="books" src="https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=400&auto=format&fit=crop" />
-		</div>
-	</footer>
+  <dialog id="globalRateDialog" class="dialog">
+    <form method="dialog" id="globalRateForm" class="form">
+      <h3>Set Global Tuition Rate</h3>
+      <label>Hourly Rate (₹/hr)<input name="hourlyRate" type="number" step="0.5" min="0" required /></label>
+      <div class="dialog-actions"><button type="submit" class="primary">Save</button><button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button></div>
+    </form>
+  </dialog>
 
-	<script src="./app.js"></script>
+  <dialog id="sessionDialog" class="dialog">
+    <form method="dialog" id="sessionForm" class="form">
+      <h3 id="sessionDialogTitle">Add Session</h3>
+      <input type="hidden" name="id" />
+      <label>Date <input name="date" type="date" required /></label>
+      <div class="multi-student">
+        <div class="ms-header"><span>Students & Durations</span><button type="button" id="addMsRow" class="secondary">+ Add</button></div>
+        <div id="msRows" class="ms-rows"></div>
+      </div>
+      <label>Bike Taxi Fare (₹)<input name="bikeFare" type="number" step="1" min="0" value="0" /></label>
+      <label>Notes <textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
+      <div class="dialog-actions"><button type="submit" class="primary">Save</button><button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="paymentDialog" class="dialog">
+    <form method="dialog" id="paymentForm" class="form">
+      <h3 id="paymentDialogTitle">Add Payment</h3>
+      <input type="hidden" name="id" />
+      <label>Date <input name="date" type="date" required /></label>
+      <label>Amount (₹)<input name="amount" type="number" step="1" min="0" required /></label>
+      <label>Notes <textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
+      <div class="dialog-actions"><button type="submit" class="primary">Save</button><button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <footer class="app-footer">
+    <div class="footer-note">Built for modern browsers • Offline + cloud sync ready.</div>
+  </footer>
+
+  <script src="./app.js"></script>
 </body>
 </html>
