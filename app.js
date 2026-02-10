@@ -6,7 +6,7 @@
 		globalRate: 0,
 		students: [], // {id,name,gender,color,notes}
 		sessions: [], // {id,date,rows:[{studentId,duration,rate}], bikeFare, notes}
-		payments: []  // {id,date,studentId,amount,notes}
+		payments: []  // {id,date,amount,notes}
 	};
 
 	function load(){
@@ -36,7 +36,12 @@
 				rate: Number.isFinite(Number(r.rate)) ? Number(r.rate) : Number(studentRates.get(r.studentId) ?? state.globalRate ?? 0)
 			}))
 		}));
-		state.payments = state.payments||[];
+		state.payments = (state.payments||[]).map(p=>({
+			id: p.id,
+			date: p.date,
+			amount: Number(p.amount||0),
+			notes: p.notes||''
+		}));
 	}
 
 
@@ -260,20 +265,13 @@
 	}
 
 	// Payments CRUD UI
-	function renderPaymentStudentOptions(){
-		const sel = byId('paymentStudent');
-		sel.innerHTML = state.students.map(s=>`<option value="${s.id}">${genderEmoji(s.gender)} ${s.name}</option>`).join('');
-	}
 	function openPaymentDialog(pay){
-		if(state.students.length===0){ alert('Add a student first.'); return; }
-		renderPaymentStudentOptions();
 		const dlg = byId('paymentDialog');
 		const form = byId('paymentForm');
 		byId('paymentDialogTitle').textContent = pay ? 'Edit Payment' : 'Add Payment';
 		form.reset();
 		form.id.value = pay?.id || '';
 		form.date.value = pay?.date || new Date().toISOString().slice(0,10);
-		form.studentId.value = pay?.studentId || state.students[0].id;
 		form.amount.value = pay?.amount ?? '';
 		form.notes.value = pay?.notes || '';
 		dlg.showModal();
@@ -286,7 +284,6 @@
 			const payload = {
 				id: data.id || genId(),
 				date: data.date,
-				studentId: data.studentId,
 				amount: Number(data.amount||0),
 				notes: data.notes||''
 			};
@@ -306,12 +303,11 @@
 			.filter(p=> inRange(p.date, sDate, eDate))
 			.sort((a,b)=> new Date(b.date)-new Date(a.date))
 			.forEach(p=>{
-				const st = state.students.find(s=>s.id===p.studentId);
 				const item = document.createElement('div');
 				item.className = 'list-item';
 				item.innerHTML = `
 					<div>
-						<div class="li-title">${dateStr(p.date)} — ${genderEmoji(st?.gender)} ${st?.name}</div>
+						<div class="li-title">${dateStr(p.date)} — Payment</div>
 						<div class="li-sub">Amount: ${fmtCurrency(p.amount)} ${p.notes? '· '+p.notes:''}</div>
 					</div>
 					<div class="li-right">
@@ -366,9 +362,8 @@
 				hours += r.duration;
 			}});
 		});
-		let collected=0;
-		state.payments.forEach(p=>{ if(p.studentId===studentId) collected += (p.amount||0); });
-		return { fees, hours, collected, balance: fees - collected };
+		const collected = 0;
+		return { fees, hours, collected, balance: fees };
 	}
 
 	// Dashboard & Charts
@@ -379,6 +374,9 @@
 		byId('kpiFees').textContent = fmtCurrency(k.tuitionFees);
 		byId('kpiTaxi').textContent = fmtCurrency(k.taxi);
 		byId('kpiCollected').textContent = fmtCurrency(k.collected);
+		const currentMonth = monthKey(new Date().toISOString().slice(0,10));
+		const currentMonthTotals = calcTotals(currentMonth);
+		byId('kpiCurrentMonthAmount').textContent = fmtCurrency(currentMonthTotals.collected);
 		byId('kpiBalance').textContent = fmtCurrency(k.balance);
 
 		// Timeframe chart using selected mode
@@ -499,7 +497,7 @@
 		download('sessions.csv', headers.join(',')+'\n'+rows.join('\n'), 'text/csv');
 	}
 	function exportCsvPayments(){
-		const headers = ['id','date','studentId','amount','notes'];
+		const headers = ['id','date','amount','notes'];
 		const rows = state.payments.map(p=> headers.map(h=>csvEscape(p[h])).join(','));
 		download('payments.csv', headers.join(',')+'\n'+rows.join('\n'), 'text/csv');
 	}
