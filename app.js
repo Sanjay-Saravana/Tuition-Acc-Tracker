@@ -24,6 +24,15 @@
     return (s.students?.length || 0) + (s.sessions?.length || 0) + (s.payments?.length || 0) > 0;
   }
 
+  function stateComparableSnapshot(s){
+    return JSON.stringify({
+      globalRate: Number(s?.globalRate || 0),
+      students: s?.students || [],
+      sessions: s?.sessions || [],
+      payments: s?.payments || []
+    });
+  }
+
   function parseJSON(raw){
     try { return JSON.parse(raw); } catch { return null; }
   }
@@ -472,6 +481,17 @@
     return cloudTs > localTs ? cloudPayload : localState;
   }
 
+  function resolveConflictInteractively(localState, cloudState){
+    const localSnapshot = stateComparableSnapshot(localState);
+    const cloudSnapshot = stateComparableSnapshot(cloudState);
+    if(localSnapshot === cloudSnapshot) return localState;
+
+    const keepCloud = confirm(
+      'Conflict detected: both local and cloud data have different content.\n\nOK = Keep CLOUD data\nCancel = Keep LOCAL data'
+    );
+    return keepCloud ? cloudState : localState;
+  }
+
   async function syncCloudState({preferCloud=false}={}){
     if(syncInFlight || !supabase) return;
     const user = await getUser();
@@ -493,7 +513,13 @@
         return;
       }
 
-      const selected = chooseState(state, cloudPayload, row.updated_at, preferCloud);
+      let selected;
+      const bothHaveData = hasData(state) && hasData(cloudPayload);
+      if(bothHaveData){
+        selected = resolveConflictInteractively(state, cloudPayload);
+      }else{
+        selected = chooseState(state, cloudPayload, row.updated_at, preferCloud);
+      }
       const useCloud = selected !== state;
 
       if(useCloud){
