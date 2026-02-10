@@ -3,8 +3,9 @@
 	const STORAGE_KEY = "tuition_accounts_v1";
 	const THEME_KEY = "tuition_theme";
 	let state = {
-		students: [], // {id,name,gender,hourlyRate,color,notes}
-		sessions: [], // {id,date,rows:[{studentId,duration}], bikeFare, notes}
+		globalRate: 0,
+		students: [], // {id,name,gender,color,notes}
+		sessions: [], // {id,date,rows:[{studentId,duration,rate}], bikeFare, notes}
 		payments: []  // {id,date,studentId,amount,notes}
 	};
 
@@ -18,6 +19,26 @@
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 		refreshAll();
 	}
+
+	function normalizeState(){
+		if(typeof state.globalRate !== 'number' || Number.isNaN(state.globalRate)){
+			state.globalRate = 0;
+		}
+		const studentRates = new Map((state.students||[]).map(st=>[st.id, Number(st.hourlyRate||0)]));
+		state.students = (state.students||[]).map(st=>{
+			const { hourlyRate, ...rest } = st;
+			return rest;
+		});
+		state.sessions = (state.sessions||[]).map(sess=>({
+			...sess,
+			rows: (sess.rows||[]).map(r=>({
+				...r,
+				rate: Number.isFinite(Number(r.rate)) ? Number(r.rate) : Number(studentRates.get(r.studentId) ?? state.globalRate ?? 0)
+			}))
+		}));
+		state.payments = state.payments||[];
+	}
+
 
 	function setTheme(theme){
 		document.documentElement.setAttribute('data-theme', theme);
@@ -70,7 +91,7 @@
 			item.innerHTML = `
 				<div>
 					<div class="li-title">${genderEmoji(st.gender)} ${st.name}</div>
-					<div class="li-sub">Rate: ${fmtCurrency(st.hourlyRate)}/hr · <span class="chip"><span class="swatch" style="background:${st.color}"></span> Tag</span> · Balance: ${fmtCurrency(dues.balance)}</div>
+					<div class="li-sub"><span class="chip"><span class="swatch" style="background:${st.color}"></span> Tag</span> · Balance: ${fmtCurrency(dues.balance)}</div>
 				</div>
 				<div class="li-right">
 					<button class="secondary" data-act="edit">Edit</button>
@@ -90,7 +111,6 @@
 		form.id.value = st?.id || '';
 		form.name.value = st?.name || '';
 		form.gender.value = st?.gender || 'male';
-		form.hourlyRate.value = st?.hourlyRate ?? '';
 		form.color.value = st?.color || '#5b8def';
 		form.notes.value = st?.notes || '';
 		dlg.showModal();
@@ -104,7 +124,6 @@
 				id: data.id || genId(),
 				name: data.name.trim(),
 				gender: data.gender,
-				hourlyRate: Number(data.hourlyRate||0),
 				color: data.color,
 				notes: data.notes||''
 			};
@@ -115,6 +134,30 @@
 		});
 		byId('addStudentBtn').addEventListener('click', ()=> openStudentDialog(null));
 	}
+
+	function renderGlobalRate(){
+		byId('globalRateDisplay').textContent = `${fmtCurrency(state.globalRate)}/hr`;
+	}
+
+	function openGlobalRateDialog(){
+		const dlg = byId('globalRateDialog');
+		const form = byId('globalRateForm');
+		form.reset();
+		form.hourlyRate.value = Number(state.globalRate||0);
+		dlg.showModal();
+	}
+
+	function handleGlobalRateForm(){
+		const form = byId('globalRateForm');
+		form.addEventListener('submit', (e)=>{
+			e.preventDefault();
+			state.globalRate = Number(form.hourlyRate.value||0);
+			save();
+			form.closest('dialog').close();
+		});
+		byId('editGlobalRateBtn').addEventListener('click', openGlobalRateDialog);
+	}
+
 
 	// Sessions CRUD UI
 	function msRowTemplate(selectedId, duration){
@@ -148,6 +191,11 @@
 		rs.forEach(r=>{
 			rows.insertAdjacentHTML('beforeend', msRowTemplate(r.studentId, r.duration));
 		});
+		rows.querySelectorAll('.ms-row').forEach((row, i)=>{
+			const current = rs[i];
+			row.querySelector('select[name="studentId"]').value = current.studentId;
+			row.querySelector('input[name="duration"]').value = current.duration;
+		});
 		bindMsRows(rows);
 		dlg.showModal();
 	}
@@ -160,14 +208,15 @@
 		const form = byId('sessionForm');
 		form.addEventListener('submit', (e)=>{
 			e.preventDefault();
-			const fd = new FormData(form);
 			const id = form.id.value || genId();
 			const date = form.date.value;
 			const bikeFare = Number(form.bikeFare.value||0);
 			const notes = form.notes.value||'';
+			const currentRate = Number(state.globalRate||0);
 			const rows = Array.from(form.querySelectorAll('.ms-row')).map(row=>({
 				studentId: row.querySelector('select[name="studentId"]').value,
-				duration: Number(row.querySelector('input[name="duration"]').value||0)
+				duration: Number(row.querySelector('input[name="duration"]').value||0),
+				rate: currentRate
 			})).filter(r=>r.studentId && r.duration>0);
 			if(rows.length===0){ alert('Add at least one student with duration.'); return; }
 			const payload = { id, date, rows, bikeFare, notes };
@@ -282,7 +331,7 @@
 		sess.rows.forEach(r=>{
 			const st = state.students.find(s=>s.id===r.studentId);
 			if(!st) return;
-			fee += r.duration * (st.hourlyRate||0);
+			fee += r.duration * Number(r.rate||0);
 			hours += r.duration;
 		});
 		const total = fee + (Number(sess.bikeFare)||0);
@@ -313,8 +362,7 @@
 		let fees=0, hours=0;
 		state.sessions.forEach(s=>{
 			s.rows.forEach(r=>{ if(r.studentId===studentId){
-				const st = state.students.find(x=>x.id===studentId);
-				fees += r.duration * (st?.hourlyRate||0);
+				fees += r.duration * Number(r.rate||0);
 				hours += r.duration;
 			}});
 		});
@@ -446,8 +494,8 @@
 		download('students.csv', headers.join(',')+'\n'+rows.join('\n'), 'text/csv');
 	}
 	function exportCsvSessions(){
-		const headers = ['id','date','bikeFare','notes','studentId','duration'];
-		const rows = state.sessions.flatMap(s=> s.rows.map(r=> [s.id,s.date,s.bikeFare||0,s.notes||'',r.studentId,r.duration].map(csvEscape).join(',')));
+		const headers = ['id','date','bikeFare','notes','studentId','duration','rate'];
+		const rows = state.sessions.flatMap(s=> s.rows.map(r=> [s.id,s.date,s.bikeFare||0,s.notes||'',r.studentId,r.duration,r.rate||0].map(csvEscape).join(',')));
 		download('sessions.csv', headers.join(',')+'\n'+rows.join('\n'), 'text/csv');
 	}
 	function exportCsvPayments(){
@@ -503,6 +551,7 @@
 
 	// Refresh functions
 	function refreshAll(){
+		renderGlobalRate();
 		renderStudents();
 		renderSessions();
 		renderPayments();
@@ -519,6 +568,7 @@
 	function init(){
 		initTheme();
 		load();
+		normalizeState();
 		initTabs();
 		byId('themeToggle').addEventListener('click', ()=>{
 			const cur = document.documentElement.getAttribute('data-theme')||'dark';
@@ -526,6 +576,7 @@
 		});
 		// Forms
 		handleStudentForm();
+		handleGlobalRateForm();
 		handleSessionForm();
 		handlePaymentForm();
 		// Filters
