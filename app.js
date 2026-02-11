@@ -398,11 +398,74 @@
     return lines.join('\n');
   }
 
-  function csvEscape(v){ if(v==null) return ''; const s = String(v).replaceAll('"','""'); return /[",\n]/.test(s) ? `"${s}"` : s; }
+  function csvEscape(v){ if(v==null) return ''; const s = String(v).replaceAll('\"','\"\"'); return /[\",\n]/.test(s) ? `\"${s}\"` : s; }
+  function xmlEscape(v){ return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;'); }
   function download(filename, content, type='text/plain'){ const blob = new Blob([content],{type}); const a=document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
-  function exportCsvStudents(){ const h=['id','name','gender','color','notes']; download('students.csv', `${h.join(',')}\n${state.students.map(s=>h.map(k=>csvEscape(s[k])).join(',')).join('\n')}`, 'text/csv'); }
-  function exportCsvSessions(){ const h=['id','date','bikeFare','notes','studentId','duration','rate']; const rows = state.sessions.flatMap(s=>s.rows.map(r=>[s.id,s.date,s.bikeFare,s.notes,r.studentId,r.duration,r.rate].map(csvEscape).join(','))); download('sessions.csv', `${h.join(',')}\n${rows.join('\n')}`, 'text/csv'); }
-  function exportCsvPayments(){ const h=['id','date','amount','notes']; download('payments.csv', `${h.join(',')}\n${state.payments.map(p=>h.map(k=>csvEscape(p[k])).join(',')).join('\n')}`, 'text/csv'); }
+
+  function exportCsvStudents(){
+    const h=['id','name','gender','color','notes'];
+    const rows = state.students.map(st=>h.map(k=>csvEscape(st[k])).join(','));
+    download('students.csv', `${h.join(',')}
+${rows.join('\n')}`, 'text/csv;charset=utf-8');
+  }
+
+  function exportCsvSessions(){
+    const h=['sessionId','sessionDate','studentId','studentName','durationHours','ratePerHour','tuitionFee','bikeFare','sessionTotal','sessionNotes'];
+    const rows = state.sessions.flatMap(sess=>{
+      const t = calcSessionTotals(sess);
+      return sess.rows.map(r=>{
+        const st = state.students.find(s=>s.id===r.studentId);
+        const fee = Number(r.duration || 0) * Number(r.rate || 0);
+        return [sess.id,sess.date,r.studentId,st?.name || 'Unknown',r.duration,r.rate,fee,sess.bikeFare,t.total,sess.notes].map(csvEscape).join(',');
+      });
+    });
+    download('sessions.csv', `${h.join(',')}
+${rows.join('\n')}`, 'text/csv;charset=utf-8');
+  }
+
+  function exportCsvPayments(){
+    const h=['paymentId','paymentDate','amount','notes'];
+    const rows = state.payments.map(p=>[p.id,p.date,p.amount,p.notes].map(csvEscape).join(','));
+    download('payments.csv', `${h.join(',')}
+${rows.join('\n')}`, 'text/csv;charset=utf-8');
+  }
+
+  function buildWorkbookSheet(name, headers, rows){
+    const headerXml = headers.map(h=>`<Cell><Data ss:Type="String">${xmlEscape(h)}</Data></Cell>`).join('');
+    const rowXml = rows.map(cols=>`<Row>${cols.map(c=>`<Cell><Data ss:Type="String">${xmlEscape(c)}</Data></Cell>`).join('')}</Row>`).join('');
+    return `<Worksheet ss:Name="${xmlEscape(name)}"><Table><Row>${headerXml}</Row>${rowXml}</Table></Worksheet>`;
+  }
+
+  function exportExcelWorkbook(){
+    const sessionsRows = state.sessions.flatMap(sess=>{
+      const totals = calcSessionTotals(sess);
+      return sess.rows.map(r=>{
+        const st = state.students.find(s=>s.id===r.studentId);
+        return [sess.id,sess.date,st?.name || 'Unknown',r.duration,r.rate,Number(r.duration || 0) * Number(r.rate || 0),sess.bikeFare,totals.total,sess.notes || ''];
+      });
+    });
+
+    const summary = calcTotalsRange('', '');
+    const sheets = [
+      buildWorkbookSheet('Summary', ['Metric', 'Value'], [
+        ['Total Students', state.students.length],
+        ['Total Sessions', state.sessions.length],
+        ['Total Payments', state.payments.length],
+        ['Total Hours', summary.totalHours],
+        ['Tuition Fees', summary.tuitionFees],
+        ['Taxi Fare', summary.taxi],
+        ['Collected', summary.collected],
+        ['Balance', summary.balance]
+      ]),
+      buildWorkbookSheet('Students', ['ID','Name','Gender','Color','Notes'], state.students.map(st=>[st.id, st.name, st.gender, st.color, st.notes || ''])),
+      buildWorkbookSheet('Sessions', ['Session ID','Date','Student','Duration (h)','Rate/hr','Tuition Fee','Bike Fare','Session Total','Session Notes'], sessionsRows),
+      buildWorkbookSheet('Payments', ['Payment ID','Date','Amount','Notes'], state.payments.map(p=>[p.id,p.date,p.amount,p.notes || '']))
+    ].join('');
+
+    const workbook = `<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${sheets}</Workbook>`;
+    download('tuition-structured-export.xls', workbook, 'application/vnd.ms-excel');
+  }
+
   function exportBackup(){ download('tuition-backup.json', JSON.stringify(state,null,2), 'application/json'); }
 
   function importBackup(file){
@@ -665,6 +728,7 @@
     byId('exportStudentsCsv').onclick = exportCsvStudents;
     byId('exportSessionsCsv').onclick = exportCsvSessions;
     byId('exportPaymentsCsv').onclick = exportCsvPayments;
+    byId('exportExcel').onclick = exportExcelWorkbook;
     byId('exportBackup').onclick = exportBackup;
     byId('importBackup').onclick = ()=>{ const f=byId('importBackupFile').files[0]; if(!f) return alert('Choose a backup file'); importBackup(f); };
     update();
