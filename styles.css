@@ -66,6 +66,7 @@ body{
 .nav-label{margin:6px 0 2px;font-size:.67rem;font-weight:800;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 .tab-list{display:grid;gap:8px}
 .tab{
+  width:100%;
   appearance:none;
   border:1px solid var(--border);
   border-radius:14px;
@@ -90,6 +91,9 @@ body{
 .hero-kicker{margin:0 0 4px;font-size:.72rem;text-transform:uppercase;letter-spacing:.16em;color:var(--primary-2);font-weight:800}
 .top-strip h2{margin:0;font-size:clamp(1.35rem,2.5vw,2rem)}
 .li-sub{margin:6px 0 0;color:var(--muted);font-size:.86rem}
+
+h2,h3{margin:0}
+.panel-header h2{line-height:1.2}
 
 .panel{display:none}
 .panel.active{display:block;animation:panelIn .25s ease}
@@ -159,6 +163,10 @@ input,select,textarea,.file-input{border:1px solid var(--border);background:var(
 .ms-row{display:grid;grid-template-columns:1fr 130px 42px;gap:8px}
 
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:end}
+.grid-tight{gap:10px}
+.align-center{align-items:center}
+.file-input{min-height:44px}
+
 .emoji-output{white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px}
 .report-totals{margin-top:14px;line-height:1.8}
 .export-spacer{margin-top:10px}
@@ -170,6 +178,7 @@ input,select,textarea,.file-input{border:1px solid var(--border);background:var(
   .tab-list{grid-template-columns:repeat(3,minmax(0,1fr))}
   .tab{justify-content:center;text-align:center}
   .main-area{padding-top:2px}
+  .side-bottom{grid-template-columns:repeat(3,minmax(0,1fr));align-items:center}
 }
 
 @media (max-width:760px){
@@ -181,6 +190,9 @@ input,select,textarea,.file-input{border:1px solid var(--border);background:var(
   .li-right{width:100%;justify-content:flex-end}
   .grid-3{grid-template-columns:1fr}
   .ms-row{grid-template-columns:1fr 1fr 42px}
+  .tab{gap:6px}
+  .side-bottom{grid-template-columns:1fr 1fr}
+  .side-bottom .icon-btn{width:100%}
 }
 
 @media (max-width:520px){
@@ -189,6 +201,10 @@ input,select,textarea,.file-input{border:1px solid var(--border);background:var(
   .tab{padding:10px;font-size:.88rem}
   .primary,.secondary,.icon-btn{width:100%}
   .panel-header .primary,.panel-header .secondary,.panel-header .icon-btn{width:auto}
+  .header-actions-inline .primary,.header-actions-inline .secondary{width:auto}
+  .dialog-actions .primary,.dialog-actions .secondary{width:auto}
+  .side-bottom{grid-template-columns:1fr}
+  .side-bottom .icon-btn{width:100%}
   .ms-row{grid-template-columns:1fr}
   .form{min-width:min(100%,92vw)}
 }
