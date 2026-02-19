@@ -15,6 +15,7 @@
 <body>
   <div class="layout-shell app-shell">
     <aside class="side-nav">
+      <p class="nav-overline">Tuition control center</p>
       <div class="brand-block">
         <div class="logo-mark">📘</div>
         <div>
@@ -24,12 +25,12 @@
       </div>
       <p class="nav-label">Navigation</p>
       <div class="tab-list" role="tablist" aria-label="Main navigation tabs">
-        <button class="tab active" data-tab="dashboard" aria-selected="true">Dashboard</button>
-        <button class="tab" data-tab="students">Students</button>
-        <button class="tab" data-tab="sessions">Sessions</button>
-        <button class="tab" data-tab="payments">Payments</button>
-        <button class="tab" data-tab="reports">Reports</button>
-        <button class="tab" data-tab="export">Export</button>
+        <button class="tab active" data-tab="dashboard" aria-selected="true"><span>📊</span>Dashboard</button>
+        <button class="tab" data-tab="students"><span>🧑‍🎓</span>Students</button>
+        <button class="tab" data-tab="sessions"><span>🗓️</span>Sessions</button>
+        <button class="tab" data-tab="payments"><span>💸</span>Payments</button>
+        <button class="tab" data-tab="reports"><span>📈</span>Reports</button>
+        <button class="tab" data-tab="export"><span>🧾</span>Export</button>
       </div>
       <div class="side-bottom">
         <button id="openCloudSettings" class="secondary">Cloud Settings</button>
@@ -41,6 +42,7 @@
     <main class="main-area">
       <header class="top-strip">
         <div>
+          <p class="hero-kicker">Live classroom finance view</p>
           <h2>Tuition Accounts Tracker</h2>
           <p id="authStatus" class="li-sub">Signed out. Sign in to sync across devices.</p>
         </div>
@@ -56,7 +58,7 @@
             <div class="card kpi"><div class="kpi-label">Current Month</div><div id="kpiCurrentMonthAmount" class="kpi-value">₹0</div></div>
             <div class="card kpi"><div class="kpi-label">Balance</div><div id="kpiBalance" class="kpi-value">₹0</div></div>
           </div>
-          <div class="card chart-card">
+          <div class="card chart-card spotlight-card">
             <div class="card-title chart-header">
               <span>Collections Overview</span>
               <div class="btn-group" role="group" aria-label="Chart timeframe">
@@ -121,7 +123,7 @@
               </div>
               <div id="reportTotals" class="report-totals"></div>
             </div>
-            <div class="card chart-card">
+            <div class="card chart-card spotlight-card">
               <div class="card-title">Hours by Student</div>
               <canvas id="studentHoursChart" class="student-hours" height="220"></canvas>
             </div>
